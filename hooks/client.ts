@@ -179,6 +179,8 @@ export function useSignedUpload() {
             upsert: true,
           });
 
+      console.log(uploadedFileError, 'uploadedFileError');
+
       if (uploadedFileError) throw new Error(uploadedFileError.message);
 
       // Step 3: Insert record in `files` table
@@ -195,25 +197,31 @@ export function useSignedUpload() {
 
       if (error) throw new Error(error.message);
 
-      // Step 4: Generate a signed URL (valid for 5 minutes)
-      const { data: signedUrlData, error: signedUrlError } =
-        await supabase.storage
-          .from(bucket)
-          .createSignedUrl(uploadedFileData.path!, 60 * 5); // 5 minutes
+      const objectPath = uploadedFileData.path;
 
-      if (signedUrlError) throw new Error(signedUrlError.message);
+      const signedDownloadRes = await fetch('/api/storage/sign-download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: objectPath, expiresIn: 300 }),
+      });
+
+      const { signedUrl } = await signedDownloadRes.json();
 
       // Step 5: Notify backend about the new file
-      await fetch(process.env.FILE_UPLOAD_ENDPOINT ?? '', {
+      await fetch('https://python-render-hello.onrender.com/classifier', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           client_id: clientId,
-          file_id: signedUrlData.signedUrl,
+          file_id: signedUrl,
         }),
-      }).catch((err) => {
-        console.error('Failed to notify backend:', err);
-      });
+      })
+        .then((res) => {
+          console.log(res, 'API res');
+        })
+        .catch((err) => {
+          console.error('Failed to notify backend:', err);
+        });
 
       return { bucket, path, file };
     },

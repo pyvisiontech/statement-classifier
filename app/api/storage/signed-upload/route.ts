@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     // Build a safe storage path. Example: clients/<clientId>/<timestamp>_<filename>
     const ts = Date.now();
     const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const path = `${clientId}/${ts}_${safeName}`;
+    const path = `clients/${clientId}/${ts}_${safeName}`;
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
       auth: { persistSession: false },
