@@ -217,6 +217,7 @@ export function useSignedUpload() {
           client_id: clientId,
           signed_url: signedUrl,
           file_id: fileId,
+          accountant_id: user?.id as string,
         }),
       })
         .then((res) => {

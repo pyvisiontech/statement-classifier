@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
     // 4) For now, just log each item’s fields
     for (const [i, item] of payload.entries()) {
       const obj = item as {
+        accountant_id?: string;
         client_id?: string;
         file_id?: string;
         category_id?: string | null;
@@ -70,13 +71,15 @@ export async function POST(req: NextRequest) {
       };
 
       // soft validation (no hard fail yet)
-      const { client_id, file_id, category_id, reason_by_ai } = obj;
+      const { accountant_id, client_id, file_id, category_id, reason_by_ai } =
+        obj;
       // eslint-disable-next-line no-console
       console.log(`[transactions/webhook] item #${i}:`, {
         client_id,
         file_id,
         category_id,
         reason_by_ai,
+        accountant_id,
       });
     }
 
