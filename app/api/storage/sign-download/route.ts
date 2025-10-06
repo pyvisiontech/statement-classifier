@@ -1,4 +1,3 @@
-// app/api/storage/sign-download/route.ts
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -7,7 +6,7 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const BUCKET = process.env.NEXT_PUBLIC_SUPABASE_BUCKET ?? 'client-files';
 
 export async function POST(req: Request) {
-  const { path, expiresIn = 300 } = await req.json(); // path = 'clients/.../file.pdf'
+  const { path, expiresIn = 300 } = await req.json();
   const admin = createClient(url, serviceKey, {
     auth: { persistSession: false },
   });
