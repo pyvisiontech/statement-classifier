@@ -1,8 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'node:crypto';
+import { createClient } from '@supabase/supabase-js';
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || '';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+  auth: { persistSession: false },
+});
 
 function timingSafeEqual(a: string, b: string) {
   const aBuf = Buffer.from(a);
@@ -19,24 +25,21 @@ function normalizeSig(sig: string | null) {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1) Read raw body (must use text() BEFORE parsing to compute HMAC)
+    // 1) Read raw body for HMAC
     const raw = await req.text();
 
-    // 2) Verify signature from header
-    const provided = normalizeSig(req.headers.get('x-signature'));
-    if (!WEBHOOK_SECRET) {
+    // 2) Verify signature
+    if (!WEBHOOK_SECRET)
       return NextResponse.json(
         { error: 'Missing WEBHOOK_SECRET' },
         { status: 500 }
       );
-    }
-    if (!provided) {
+    const provided = normalizeSig(req.headers.get('x-signature'));
+    if (!provided)
       return NextResponse.json(
         { error: 'Missing x-signature' },
         { status: 401 }
       );
-    }
-
     const expected = crypto
       .createHmac('sha256', WEBHOOK_SECRET)
       .update(raw)
@@ -45,33 +48,42 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
-    // 3) Parse and validate body (expect an array of objects)
-    let payload: unknown;
+    // 3) Parse JSON: accept { events: [...] } or raw [...]
+    let parsed: unknown;
     try {
-      payload = JSON.parse(raw);
+      parsed = JSON.parse(raw);
     } catch {
       return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
     }
-
-    if (!Array.isArray(payload)) {
+    const events = Array.isArray(parsed)
+      ? parsed
+      : parsed &&
+          typeof parsed === 'object' &&
+          Array.isArray((parsed as any).events)
+        ? (parsed as any).events
+        : null;
+    if (!Array.isArray(events)) {
       return NextResponse.json(
-        { error: 'Expected an array payload' },
+        { error: 'Expected body to be { "events": [...] } or a JSON array' },
         { status: 400 }
       );
     }
 
-    // 4) For now, just log each item’s fields
-    for (const [i, item] of payload.entries()) {
-      const obj = item as {
-        accountant_id: string;
-        client_id: string;
-        file_id: string;
-        category_id?: string | null;
-        reason?: string | null;
-        confidence?: string | null;
-      };
+    // 4) Map + soft-validate to DB rows
+    type Incoming = {
+      accountant_id?: string;
+      client_id?: string;
+      file_id?: string;
+      category_id?: string | null;
+      reason?: string | null;
+      confidence?: string | number | null;
+    };
 
-      // soft validation (no hard fail yet)
+    const rows = [];
+    const invalids: Array<{ index: number; error: string }> = [];
+
+    for (let i = 0; i < events.length; i++) {
+      const e = events[i] as Incoming;
       const {
         accountant_id,
         client_id,
@@ -79,23 +91,54 @@ export async function POST(req: NextRequest) {
         category_id,
         reason,
         confidence,
-      } = obj;
-      // eslint-disable-next-line no-console
-      console.log(`[transactions/webhook] item #${i}:`, {
+      } = e || {};
+      if (!accountant_id || !client_id || !file_id) {
+        invalids.push({
+          index: i,
+          error: 'Missing required field(s): accountant_id, client_id, file_id',
+        });
+        continue;
+      }
+      rows.push({
+        accountant_id,
         client_id,
         file_id,
-        category_id,
-        reason,
-        accountant_id,
-        confidence,
+        category_id_by_ai: category_id ?? null,
+        updated_category_id: null,
+        reason: reason ?? null,
+        confidence: confidence != null ? String(confidence) : null, // store as TEXT
+        // updated_by stays null; timestamps handled by defaults
       });
     }
 
-    // 5) Respond OK
-    return NextResponse.json({ ok: true, count: payload.length });
+    if (rows.length === 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          inserted: 0,
+          invalids,
+          message: 'No valid events to insert',
+        },
+        { status: 400 }
+      );
+    }
+
+    // 5) Insert in bulk using service role (bypasses RLS)
+    const { data, error } = await admin
+      .from('transactions')
+      .insert(rows)
+      .select('id');
+    if (error)
+      return NextResponse.json({ error: error.message }, { status: 500 });
+
+    return NextResponse.json({
+      ok: true,
+      inserted: data?.length ?? 0,
+      invalids,
+    });
   } catch (err: any) {
     // eslint-disable-next-line no-console
-    console.error('[transactions/webhook] error:', err);
+    console.error('[transactions/webhook] insert error:', err);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }
