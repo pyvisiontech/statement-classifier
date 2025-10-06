@@ -184,7 +184,7 @@ export function useSignedUpload() {
       if (uploadedFileError) throw new Error(uploadedFileError.message);
 
       // Step 3: Insert record in `files` table
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('files')
         .insert({
           s3_path: uploadedFileData.path ?? '',
@@ -196,6 +196,8 @@ export function useSignedUpload() {
         .select('id');
 
       if (error) throw new Error(error.message);
+
+      const fileId = data?.[0].id;
 
       const objectPath = uploadedFileData.path;
 
@@ -213,7 +215,8 @@ export function useSignedUpload() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           client_id: clientId,
-          file_id: signedUrl,
+          signed_url: signedUrl,
+          file_id: fileId,
         }),
       })
         .then((res) => {
