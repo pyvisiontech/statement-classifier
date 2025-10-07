@@ -1,8 +1,23 @@
-import { type NextRequest } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/utils/supabase/middleware';
 
 export async function middleware(request: NextRequest) {
-  return await updateSession(request);
+  const { pathname } = request.nextUrl;
+
+  // 1) Skip auth for webhooks & API routes
+  if (
+    pathname.startsWith('/transactions/webhook') || // your webhook
+    pathname.startsWith('/api') // any API routes you might add
+  ) {
+    return NextResponse.next();
+  }
+
+  // 2) Only redirect unauthenticated users for page navigations
+  const accept = request.headers.get('accept') || '';
+  const isPageNavigation = accept.includes('text/html');
+
+  // Delegate to your existing session handler
+  return updateSession(request, { isPageNavigation });
 }
 
 export const config = {

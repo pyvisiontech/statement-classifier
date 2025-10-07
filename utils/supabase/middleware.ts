@@ -1,7 +1,10 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-export async function updateSession(request: NextRequest) {
+export async function updateSession(
+  request: NextRequest,
+  opts?: { isPageNavigation?: boolean }
+) {
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -38,10 +41,14 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/auth')
   ) {
-    // no user, potentially respond by redirecting the user to the login page
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    return NextResponse.redirect(url);
+    // Only redirect browsers (page navigations), not API/webhook POSTs
+    if (opts?.isPageNavigation) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      return NextResponse.redirect(url);
+    }
+    // Otherwise just let it through — API routes can handle 401/403 themselves
+    return supabaseResponse;
   }
 
   return supabaseResponse;
