@@ -12,8 +12,6 @@ import {
 import { useCallback } from 'react';
 import { useGlobalContext } from '@/contexts/GlobalContext';
 
-const FILE_UPLOAD_ENDPOINT = process.env.FILE_UPLOAD_ENDPOINT || '';
-
 export function useGetClients() {
   const supabase = useSupabase();
 
@@ -212,7 +210,7 @@ export function useSignedUpload() {
       const { signedUrl } = await signedDownloadRes.json();
 
       // Step 5: Notify backend about the new file
-      await fetch(FILE_UPLOAD_ENDPOINT, {
+      await fetch("https://statement-classifier-python.onrender.com/classifier", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
