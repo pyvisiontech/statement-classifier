@@ -291,6 +291,10 @@ export function useGetTransactionsByFile(clientId?: string, fileId?: string) {
         ai_category_name: row.ai?.[0]?.name ?? row.ai?.name ?? null,
         updated_category_name:
           row.updated?.[0]?.name ?? row.updated?.name ?? null,
+        tx_timestamp: row.tx_timestamp,
+        tx_narration: row.tx_narration,
+        tx_amount: row.tx_amount,
+        confidence: row.confidence,
       })) as Txn[];
     },
     staleTime: 1000 * 30,

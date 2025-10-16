@@ -231,11 +231,11 @@ export default function TransactionsDialog({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[220px]">Created</TableHead>
-                    <TableHead className="w-[220px]">Reason</TableHead>
-                    <TableHead>AI Category</TableHead>
-                    <TableHead>Updated Category</TableHead>
+                    <TableHead className="w-[220px]">Time</TableHead>
+                    <TableHead className="w-[220px]">Narration</TableHead>
+                    <TableHead className="w-[220px]">Amount</TableHead>
                     <TableHead className="w-[260px]">Category (edit)</TableHead>
+                    <TableHead className="w-[220px]">Category Reason</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -244,16 +244,13 @@ export default function TransactionsDialog({
                     return (
                       <TableRow key={t.id}>
                         <TableCell className="whitespace-nowrap text-sm">
-                          {new Date(t.created_at).toLocaleString()}
+                          {t.tx_timestamp?.toLocaleString()}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap text-sm">
-                          {t.reason}
+                        <TableCell className="text-sm whitespace-normal break-words max-w-[220px]">
+                          {t.tx_narration}
                         </TableCell>
-                        <TableCell className="text-sm">
-                          {t.ai_category_name || '—'}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {t.updated_category_name || '—'}
+                        <TableCell className="whitespace-nowrap">
+                          {t.tx_amount?.toFixed(2)}
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <Select
@@ -274,6 +271,9 @@ export default function TransactionsDialog({
                               ))}
                             </SelectContent>
                           </Select>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-sm">
+                          {t.reason}
                         </TableCell>
                       </TableRow>
                     );
