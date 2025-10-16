@@ -7,7 +7,7 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "supabase-generate-types": "supabase gen types typescript --project-id qvkwfvcievnokpiwzruo --schema public > ./types/supabase.ts && prettier ./types/supabase.ts --write --debug"
+    "supabase-generate-types": "supabase gen types typescript --project-id eoyrvbmyvvomwkzxatrg --schema public > ./types/supabase.ts && prettier ./types/supabase.ts --write --debug"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

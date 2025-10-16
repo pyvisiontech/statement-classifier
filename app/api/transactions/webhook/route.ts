@@ -77,6 +77,9 @@ export async function POST(req: NextRequest) {
       category_id?: string | null;
       reason?: string | null;
       confidence?: string | number | null;
+      tx_narration?: string | null;
+      tx_amount?: number | null;
+      tx_timestamp?: string | null;
     };
 
     const rows = [];
@@ -91,6 +94,9 @@ export async function POST(req: NextRequest) {
         category_id,
         reason,
         confidence,
+        tx_narration,
+        tx_amount,
+        tx_timestamp,
       } = e || {};
       if (!accountant_id || !client_id || !file_id) {
         invalids.push({
@@ -107,6 +113,9 @@ export async function POST(req: NextRequest) {
         updated_category_id: null,
         reason: reason ?? null,
         confidence: confidence != null ? String(confidence) : null, // store as TEXT
+        tx_narration,
+        tx_amount,
+        tx_timestamp,
         // updated_by stays null; timestamps handled by defaults
       });
     }

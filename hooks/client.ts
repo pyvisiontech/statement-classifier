@@ -276,7 +276,7 @@ export function useGetTransactionsByFile(clientId?: string, fileId?: string) {
         )
         .eq('client_id', clientId)
         .eq('file_id', fileId)
-        .order('created_at', { ascending: false });
+        .order('tx_timestamp', { ascending: false });
 
       if (error) throw new Error(error.message);
 
