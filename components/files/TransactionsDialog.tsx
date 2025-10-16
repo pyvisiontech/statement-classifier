@@ -145,7 +145,7 @@ export default function TransactionsDialog({
       )
       .map((t) => ({
         id: t.id,
-        updated_category_id: edits[t.id] ?? null,
+        updated_category_id: Number(edits[t.id]) ?? null,
         accountant_id: user?.id as string,
       }));
 
@@ -257,7 +257,7 @@ export default function TransactionsDialog({
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <Select
-                            value={currentValue ?? 'none'} // never empty string
+                            value={currentValue?.toString() ?? 'none'} // never empty string
                             onValueChange={(v) =>
                               onChangeCategory(t.id, v === 'none' ? null : v)
                             }
@@ -268,7 +268,7 @@ export default function TransactionsDialog({
                             <SelectContent>
                               <SelectItem value="none">— None —</SelectItem>
                               {categories?.map((c) => (
-                                <SelectItem key={c.id} value={c.id}>
+                                <SelectItem key={c.id} value={c.id.toString()}>
                                   {c.name}
                                 </SelectItem>
                               ))}

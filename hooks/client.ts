@@ -300,7 +300,7 @@ export function useGetTransactionsByFile(clientId?: string, fileId?: string) {
 export type TxnCategoryPatch = {
   id: string;
   accountant_id: string;
-  updated_category_id: string | null;
+  updated_category_id: number | null;
 };
 
 export function useUpdateTransactionsCategories(
