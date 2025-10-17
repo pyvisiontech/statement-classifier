@@ -37,6 +37,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useGlobalContext } from '@/contexts/GlobalContext';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 type Props = {
   clientId: string;
@@ -166,6 +168,38 @@ export default function TransactionsDialog({
   const hasError = txnsError || catsError;
   const isEmpty = !loading && !hasError && (sorted?.length ?? 0) === 0;
 
+  const exportToExcel = async (data: typeof sorted) => {
+   // Create a new workbook and worksheet
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Transactions');
+
+  // Define columns
+  worksheet.columns = [
+    { header: 'Time', key: 'Time', width: 28 },
+    { header: 'Narration', key: 'Narration', width: 50 },
+    { header: 'Amount', key: 'Amount', width: 12 },
+    { header: 'Category', key: 'Category', width: 18 },
+    { header: 'Category Reason', key: 'CategoryReason', width: 25 },
+  ];
+
+  // Add rows from your table data
+  data.forEach((item) => {
+    worksheet.addRow({
+      Time: item.tx_timestamp?.toLocaleString() ?? '',
+      Narration: item.tx_narration,
+      Amount: item.tx_amount?.toFixed(2) ?? '',
+      Category: item.displayCategoryName ?? '',
+      CategoryReason: item.reason ?? '',
+    });
+  });
+
+  // Write workbook to buffer then trigger download
+  workbook.xlsx.writeBuffer().then((buffer: any) => {
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, 'transactions.xlsx');
+  });
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
@@ -198,6 +232,11 @@ export default function TransactionsDialog({
               </SelectContent>
             </Select>
           </div>
+          <Button
+            onClick={() => exportToExcel(sorted)}
+          >
+            Download Excel
+          </Button>
         </div>
 
         {/* Content area: loading / error / empty / table */}
