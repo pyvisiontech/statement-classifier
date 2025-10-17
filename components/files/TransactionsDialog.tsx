@@ -39,6 +39,7 @@ import {
 import { useGlobalContext } from '@/contexts/GlobalContext';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import React from 'react';
 
 type Props = {
   clientId: string;
@@ -206,6 +207,15 @@ export default function TransactionsDialog({
   });
   }
 
+  const groupedByCategory = sorted.reduce((groups, transaction) => {
+      const category = transaction.displayCategoryId || 'Uncategorized';
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+      groups[category].push(transaction);
+      return groups;
+    }, {} as Record<string, typeof sorted>);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
@@ -284,43 +294,47 @@ export default function TransactionsDialog({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sorted.map((t) => {
-                    const currentValue = edits[t.id] ?? t.displayCategoryId; // string | null
+                  {Object.entries(groupedByCategory).map(([categoryId, transactions]) => {
+                    const categoryName = categories?.find(c => c.id.toString() === categoryId)?.name ?? 'Uncategorized';
+
                     return (
-                      <TableRow key={t.id}>
-                        <TableCell className="whitespace-nowrap text-sm">
-                          {t.tx_timestamp?.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-sm whitespace-normal break-words max-w-[220px]">
-                          {t.tx_narration}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {t.tx_amount?.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <Select
-                            value={currentValue?.toString() ?? 'none'} // never empty string
-                            onValueChange={(v) =>
-                              onChangeCategory(t.id, v === 'none' ? null : v)
-                            }
-                          >
-                            <SelectTrigger className="min-w-[220px]">
-                              <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">— None —</SelectItem>
-                              {categories?.map((c) => (
-                                <SelectItem key={c.id} value={c.id.toString()}>
-                                  {c.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-sm">
-                          {t.reason}
-                        </TableCell>
-                      </TableRow>
+                      <React.Fragment key={categoryId}>
+                        {/* Level 1: Category row */}
+                        <TableRow className="bg-gray-100 font-bold">
+                          <TableCell colSpan={5}>{categoryName}</TableCell>
+                        </TableRow>
+
+                        {/* Level 2: Transactions under this category */}
+                        {transactions.map((t) => {
+                          const currentValue = edits[t.id] ?? t.displayCategoryId;
+                          return (
+                            <TableRow key={t.id}>
+                              <TableCell className="whitespace-nowrap text-sm">{t.tx_timestamp?.toLocaleString()}</TableCell>
+                              <TableCell className="text-sm whitespace-normal break-words max-w-[220px]">{t.tx_narration}</TableCell>
+                              <TableCell className="whitespace-nowrap">{t.tx_amount?.toFixed(2)}</TableCell>
+                              <TableCell className="whitespace-nowrap">
+                                <Select
+                                  value={currentValue?.toString() ?? 'none'}
+                                  onValueChange={(v) => onChangeCategory(t.id, v === 'none' ? null : v)}
+                                >
+                                  <SelectTrigger className="min-w-[220px]">
+                                    <SelectValue placeholder="Select category" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">— None —</SelectItem>
+                                    {categories?.map((c) => (
+                                      <SelectItem key={c.id} value={c.id.toString()}>
+                                        {c.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap text-sm">{t.reason}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </React.Fragment>
                     );
                   })}
                 </TableBody>
