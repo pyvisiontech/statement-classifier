@@ -182,6 +182,12 @@ export default function TransactionsDialog({
     { header: 'Category Reason', key: 'CategoryReason', width: 25 },
   ];
 
+  // Make the header row bold
+  const headerRow = worksheet.getRow(1);
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true };
+  });
+
   // Add rows from your table data
   data.forEach((item) => {
     worksheet.addRow({
