@@ -216,6 +216,15 @@ export default function TransactionsDialog({
       return groups;
     }, {} as Record<string, typeof sorted>);
 
+const [expandedCategories, setExpandedCategories] = React.useState<Record<string, boolean>>({});
+
+    const toggleCategory = (categoryId: string) => {
+      setExpandedCategories((prev) => ({
+        ...prev,
+        [categoryId]: !prev[categoryId],
+      }));
+    };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
@@ -297,15 +306,22 @@ export default function TransactionsDialog({
                   {Object.entries(groupedByCategory).map(([categoryId, transactions]) => {
                     const categoryName = categories?.find(c => c.id.toString() === categoryId)?.name ?? 'Uncategorized';
 
+                    const isExpanded = expandedCategories[categoryId];
+
                     return (
                       <React.Fragment key={categoryId}>
                         {/* Level 1: Category row */}
-                        <TableRow className="bg-gray-100 font-bold">
-                          <TableCell colSpan={5}>{categoryName}</TableCell>
+                        <TableRow
+                          className="bg-gray-100 font-bold cursor-pointer"
+                          onClick={() => toggleCategory(categoryId)}
+                        >
+                          <TableCell colSpan={5}>
+                            {isExpanded ? '▼ ' : '▶ '} {categoryName}
+                          </TableCell>
                         </TableRow>
 
                         {/* Level 2: Transactions under this category */}
-                        {transactions.map((t) => {
+                        {isExpanded && transactions.map((t) => {
                           const currentValue = edits[t.id] ?? t.displayCategoryId;
                           return (
                             <TableRow key={t.id}>
