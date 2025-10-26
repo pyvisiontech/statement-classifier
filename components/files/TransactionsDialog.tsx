@@ -6,6 +6,7 @@ import {
   useGetTransactionsByFile,
   useGetCategories,
   useUpdateTransactionsCategories,
+  useAddCategory,
 } from '@/hooks/client';
 
 import { Button } from '@/components/ui/button';
@@ -61,6 +62,7 @@ export default function TransactionsDialog({
   const [open, setOpen] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>('created_desc');
   const [edits, setEdits] = useState<Record<string, string | null>>({});
+  const addCategoryMutation = useAddCategory();
 
   const {
     data: categories,
@@ -225,6 +227,28 @@ const [expandedCategories, setExpandedCategories] = React.useState<Record<string
       }));
     };
 
+
+const addCategory = async (name: string, txnId: string) => {
+  setIsAddingCategory(true);
+  try {
+    const result = await addCategoryMutation.mutateAsync({ name });
+    // Optionally patch local categories, but best to refetch automatically
+    setEdits((e) => ({
+      ...e,
+      [txnId]: result.id.toString(),
+    }));
+    setShowAddCategory(null);
+    setNewCategoryName('');
+  } catch (e) {
+    toast.error('Unable to add category');
+  }
+  setIsAddingCategory(false);
+};
+
+  const [showAddCategory, setShowAddCategory] = useState<string | null>(null); // txnId if adding
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
@@ -292,6 +316,35 @@ const [expandedCategories, setExpandedCategories] = React.useState<Record<string
                 </div>
               </div>
             ) : (
+              <div>
+                {showAddCategory && (
+  <Dialog open={true} onOpenChange={() => setShowAddCategory(null)}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Add Category</DialogTitle>
+      </DialogHeader>
+      <input
+        value={newCategoryName}
+        onChange={(e) => setNewCategoryName(e.target.value)}
+        className="border rounded p-2 w-full"
+        placeholder="Enter new category name"
+        autoFocus
+        disabled={isAddingCategory}
+      />
+      <DialogFooter>
+        <Button variant="ghost" onClick={() => setShowAddCategory(null)} disabled={isAddingCategory}>
+          Cancel
+        </Button>
+        <Button
+          onClick={() => addCategory(newCategoryName, showAddCategory!)}
+          disabled={!newCategoryName.trim() || isAddingCategory}
+        >
+          Add
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+)}
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -331,7 +384,13 @@ const [expandedCategories, setExpandedCategories] = React.useState<Record<string
                               <TableCell className="whitespace-nowrap">
                                 <Select
                                   value={currentValue?.toString() ?? 'none'}
-                                  onValueChange={(v) => onChangeCategory(t.id, v === 'none' ? null : v)}
+                                  onValueChange={(v) => {
+                                    if (v === '__add__') {
+                                      setShowAddCategory(t.id); // t.id == current transaction id
+                                    } else {
+                                      onChangeCategory(t.id, v === 'none' ? null : v);
+                                    }
+                                  }}
                                 >
                                   <SelectTrigger className="min-w-[220px]">
                                     <SelectValue placeholder="Select category" />
@@ -343,6 +402,9 @@ const [expandedCategories, setExpandedCategories] = React.useState<Record<string
                                         {c.name}
                                       </SelectItem>
                                     ))}
+                                    <SelectItem value="__add__" className="text-blue-600 font-semibold">
+                                      + Add Category
+                                    </SelectItem>
                                   </SelectContent>
                                 </Select>
                               </TableCell>
@@ -355,6 +417,7 @@ const [expandedCategories, setExpandedCategories] = React.useState<Record<string
                   })}
                 </TableBody>
               </Table>
+              </div>
             )}
           </div>
         </div>

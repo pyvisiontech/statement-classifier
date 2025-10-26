@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import {
   CategoryData,
+  CategoryInsertData,
   ClientData,
   ClientInsertData,
   FileData,
@@ -353,6 +354,36 @@ export function useUpdateTransactionsCategories(
       await qc.invalidateQueries({
         queryKey: ['transactions-by-file', clientId, fileId],
       });
+    },
+  });
+}
+
+
+export function useAddCategory(opts?: {
+  onSuccess?: () => void;
+  onError?: (e: unknown) => void;
+}) {
+  const supabase = useSupabase();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ['add-category'],
+    mutationFn: async (values: CategoryInsertData) => {
+      const { data, error } = await supabase
+        .from('categories')
+        .insert(values)
+        .select('id, name') // make sure to select any fields you need for local usage
+        .single();
+      if (error) throw new Error(error.message);
+      if (!data?.id) throw new Error('Category creation failed.');
+      return data; // {id: ..., name: ...}
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['categories'] });
+      opts?.onSuccess?.();
+    },
+    onError: (e) => {
+      opts?.onError?.(e);
     },
   });
 }
