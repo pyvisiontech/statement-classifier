@@ -41,12 +41,40 @@ import { useGlobalContext } from '@/contexts/GlobalContext';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import React from 'react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
 
 type Props = {
   clientId: string;
   fileId: string;
   trigger: React.ReactNode;
 };
+
+type CategoryGroup = { name: string; value: number; percentage: number };
+
+const currencyFormatter = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  maximumFractionDigits: 2,
+});
+
+const CHART_COLORS = [
+  '#FF6B6B',
+  '#F7B801',
+  '#845EC2',
+  '#2C73D2',
+  '#00C9A7',
+  '#FF9671',
+  '#008F7A',
+  '#C34A36',
+  '#4D8076',
+];
 
 type SortMode =
   | 'created_desc'
@@ -62,6 +90,7 @@ export default function TransactionsDialog({
   const [open, setOpen] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>('created_desc');
   const [edits, setEdits] = useState<Record<string, string | null>>({});
+  const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
   const addCategoryMutation = useAddCategory();
 
   const {
@@ -171,6 +200,32 @@ export default function TransactionsDialog({
   const hasError = txnsError || catsError;
   const isEmpty = !loading && !hasError && (sorted?.length ?? 0) === 0;
 
+  const categorySummary = useMemo(() => {
+    if (!sorted?.length) {
+      return { total: 0, groups: [] as CategoryGroup[] };
+    }
+
+    let total = 0;
+    const map = new Map<string, number>();
+    sorted.forEach((txn) => {
+      const amount = Math.abs(Number(txn.tx_amount) || 0);
+      if (!amount) return;
+      total += amount;
+      const key = txn.currentEditName || 'Uncategorized';
+      map.set(key, (map.get(key) || 0) + amount);
+    });
+
+    const groups = Array.from(map.entries()).map(([name, value]) => ({
+      name,
+      value,
+      percentage: total ? (value / total) * 100 : 0,
+    }));
+
+    return { total, groups };
+  }, [sorted]);
+
+  const hasChartData = categorySummary.groups.length > 0;
+
   const exportToExcel = async (data: typeof sorted) => {
    // Create a new workbook and worksheet
   const workbook = new ExcelJS.Workbook();
@@ -258,66 +313,93 @@ const addCategory = async (name: string, txnId: string) => {
         </DialogHeader>
 
         {/* Header controls */}
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="truncate text-sm text-slate-600">
-            File: <span className="font-medium">{fileId}</span>
+        <div className="mb-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="truncate text-sm text-slate-600">
+              File: <span className="font-medium">{fileId}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-600">View</span>
+              <div className="flex overflow-hidden rounded-lg border">
+                {(['table', 'chart'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setViewMode(mode)}
+                    className={`cursor-pointer px-3 py-1 text-sm font-medium transition-colors ${
+                      viewMode === mode
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {mode === 'table' ? 'Table view' : 'Graph view'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Button onClick={() => exportToExcel(sorted)} className="cursor-pointer">
+              Download Excel
+            </Button>
           </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-slate-600">Sort</label>
-            <Select
-              value={sortMode}
-              onValueChange={(v) => setSortMode(v as SortMode)}
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="created_desc">
-                  Created (new → old)
-                </SelectItem>
-                <SelectItem value="created_asc">Created (old → new)</SelectItem>
-                <SelectItem value="category_asc">Category (A → Z)</SelectItem>
-                <SelectItem value="category_desc">Category (Z → A)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button
-            onClick={() => exportToExcel(sorted)}
-          >
-            Download Excel
-          </Button>
+          {viewMode === 'table' ? (
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-slate-600">Sort</label>
+              <Select
+                value={sortMode}
+                onValueChange={(v) => setSortMode(v as SortMode)}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="created_desc">
+                    Created (new → old)
+                  </SelectItem>
+                  <SelectItem value="created_asc">
+                    Created (old → new)
+                  </SelectItem>
+                  <SelectItem value="category_asc">Category (A → Z)</SelectItem>
+                  <SelectItem value="category_desc">
+                    Category (Z → A)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
         </div>
 
-        {/* Content area: loading / error / empty / table */}
-        <div className="h-[65vh] w-full overflow-auto rounded-md border">
-          <div className="min-w-[900px]">
-            {loading ? (
-              <div className="space-y-2 p-3">
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-1/2" />
-              </div>
-            ) : hasError ? (
-              <div className="p-6 text-sm text-red-600">
-                {(txnsError as Error)?.message ||
-                  (catsError as Error)?.message ||
-                  'Something went wrong.'}
-              </div>
-            ) : isEmpty ? (
-              <div className="flex h-[40vh] items-center justify-center p-6 text-center">
-                <div>
-                  <div className="text-base font-medium">
-                    No transactions yet
-                  </div>
-                  <p className="mt-1 text-sm text-slate-500">
-                    When this file is processed, transactions will appear here.
-                  </p>
+         {/* Content area  */}
+        {viewMode === 'table' ? (
+          <div className="h-[65vh] w-full overflow-auto rounded-md border">
+            <div className="min-w-[900px]">
+              {loading ? (
+                <div className="space-y-2 p-3">
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-1/2" />
                 </div>
-              </div>
-            ) : (
-              <div>
-                {showAddCategory && (
+              ) : hasError ? (
+                <div className="p-6 text-sm text-red-600">
+                  {(txnsError as Error)?.message ||
+                    (catsError as Error)?.message ||
+                    'Something went wrong.'}
+                </div>
+              ) : isEmpty ? (
+                <div className="flex h-[40vh] items-center justify-center p-6 text-center">
+                  <div>
+                    <div className="text-base font-medium">
+                      No transactions yet
+                    </div>
+                    <p className="mt-1 text-sm text-slate-500">
+                      When this file is processed, transactions will appear
+                      here.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  {showAddCategory && (
   <Dialog open={true} onOpenChange={() => setShowAddCategory(null)}>
     <DialogContent>
       <DialogHeader>
@@ -417,16 +499,101 @@ const addCategory = async (name: string, txnId: string) => {
                   })}
                 </TableBody>
               </Table>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="h-[65vh] w-full rounded-md border p-4">
+            {loading ? (
+              <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                Preparing chart…
+              </div>
+            ) : hasError ? (
+              <div className="p-6 text-center text-sm text-red-600">
+                {(txnsError as Error)?.message ||
+                  (catsError as Error)?.message ||
+                  'Something went wrong.'}
+              </div>
+            ) : !hasChartData ? (
+              <div className="flex h-full items-center justify-center rounded-md border border-dashed p-6 text-center text-sm text-slate-500">
+                Not enough categorized transactions to render a chart yet.
+              </div>
+            ) : (
+              <div className="flex h-full flex-col gap-4 lg:flex-row">
+                <div className="flex-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={categorySummary.groups}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={80}
+                        outerRadius={140}
+                        paddingAngle={2}
+                      >
+                        {categorySummary.groups.map((entry, index) => (
+                          <Cell
+                            key={entry.name}
+                            fill={CHART_COLORS[index % CHART_COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: number, name) => [
+                          currencyFormatter.format(Number(value)),
+                          name,
+                        ]}
+                      />
+                      <text
+                        x="50%"
+                        y="50%"
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        className="fill-slate-700 text-sm font-semibold"
+                      >
+                        Transactions
+                      </text>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="space-y-2 rounded-md border p-3 lg:w-64">
+                  <p className="text-sm font-semibold text-slate-600">
+                    Transaction categories
+                  </p>
+                  {categorySummary.groups.map((group, idx) => (
+                    <div
+                      key={group.name}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="h-3 w-3 rounded-full"
+                          style={{
+                            backgroundColor:
+                              CHART_COLORS[idx % CHART_COLORS.length],
+                          }}
+                        />
+                        <span>{group.name}</span>
+                      </div>
+                      <span className="font-medium">
+                        {currencyFormatter.format(group.value)} (
+                        {group.percentage.toFixed(2)}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
-        </div>
+        )}
 
-        <DialogFooter>
+        <DialogFooter className="flex items-center justify-end gap-2">
           <Button
             variant="ghost"
             onClick={() => setOpen(false)}
             disabled={isPending}
+            className="cursor-pointer"
           >
             Close
           </Button>
@@ -435,6 +602,7 @@ const addCategory = async (name: string, txnId: string) => {
             disabled={
               isPending || loading || !!hasError || (sorted?.length ?? 0) === 0
             }
+            className="cursor-pointer"
           >
             {isPending ? 'Updating…' : 'Update'}
           </Button>
