@@ -29,7 +29,7 @@ export default function ClientDetailsPage() {
 
   // Client details loading
   if (clientLoading) {
-    return <Skeleton className="h-40 w-full" />;
+    return <Skeleton className="h-40 w-full" />
   }
 
   // Client not found / error
@@ -41,6 +41,7 @@ export default function ClientDetailsPage() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-red-500">
+
             {clientError?.message ??
               `We couldn't find details for this client.`}
           </p>
@@ -53,10 +54,10 @@ export default function ClientDetailsPage() {
     <div className="space-y-6">
       {/* Client details */}
       <Card className="bg-white">
-        <CardHeader className="flex items-center justify-between">
-          <CardTitle>Client details</CardTitle>
+        <CardHeader className="flex items-center justify-between"> 
+          <CardTitle>Client details</CardTitle> 
           <AddClientDialog existingClientData={client} triggerLabel="Edit" />
-        </CardHeader>
+        </CardHeader> 
         <CardContent className="space-y-2">
           {client.first_name ? (
             <div className="text-sm">Name: {client.first_name}</div>
