@@ -277,7 +277,7 @@ export default function PieChartView({
         </div>
       </div>
 
-       // Transaction Categories - Mobile: at bottom after all charts, Desktop: on right.
+        {/* Transaction Categories - Mobile: at bottom after all charts, Desktop: on right. */}
       <div className="order-last flex w-full flex-shrink-0 flex-col rounded-lg border bg-slate-50 p-3 lg:order-none lg:absolute lg:right-0 lg:top-0 lg:h-full lg:w-80 lg:border-0 lg:bg-transparent lg:p-0">
         <div className="mb-3 flex-shrink-0 lg:mb-2">
           <p className="text-sm font-semibold text-slate-700">
