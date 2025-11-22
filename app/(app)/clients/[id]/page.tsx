@@ -8,7 +8,7 @@ import AddClientDialog from '@/components/clients/AddClientDialog';
 
 import { useGetDetailsByClientId, useGetFilesByClientId } from '@/hooks/client';
 import UploadFilesDialog from '@/components/files/UploadFilesDialog';
-import TransactionsDialog from '@/components/files/TransactionsDialog';
+import TransactionsDialog from '@/components/files/transaction/TransactionsDialog';
 
 export default function ClientDetailsPage() {
   const params = useParams();

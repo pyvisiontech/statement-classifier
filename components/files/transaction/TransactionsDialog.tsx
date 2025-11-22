@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -41,14 +40,13 @@ import { useGlobalContext } from '@/contexts/GlobalContext';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import React from 'react';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from 'recharts';
+import PieChartView from './PieChartView';
+
+const currencyFormatter = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  maximumFractionDigits: 2,
+});
 
 type Props = {
   clientId: string;
@@ -57,24 +55,6 @@ type Props = {
 };
 
 type CategoryGroup = { name: string; value: number; percentage: number };
-
-const currencyFormatter = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  maximumFractionDigits: 2,
-});
-
-const CHART_COLORS = [
-  '#FF6B6B',
-  '#F7B801',
-  '#845EC2',
-  '#2C73D2',
-  '#00C9A7',
-  '#FF9671',
-  '#008F7A',
-  '#C34A36',
-  '#4D8076',
-];
 
 type SortMode =
   | 'created_desc'
@@ -197,10 +177,11 @@ export default function TransactionsDialog({
   };
 
   const loading = txnsLoading || catsLoading;
-  const hasError = txnsError || catsError;
+  const hasError = Boolean(txnsError || catsError);
   const isEmpty = !loading && !hasError && (sorted?.length ?? 0) === 0;
 
-  const categorySummary = useMemo(() => {
+  // Separate income and expense summaries
+  const expenseSummary = useMemo(() => {
     if (!sorted?.length) {
       return { total: 0, groups: [] as CategoryGroup[] };
     }
@@ -208,8 +189,35 @@ export default function TransactionsDialog({
     let total = 0;
     const map = new Map<string, number>();
     sorted.forEach((txn) => {
-      const amount = Math.abs(Number(txn.tx_amount) || 0);
-      if (!amount) return;
+      const amount = Number(txn.tx_amount) || 0;
+      // Only include negative amounts (expenses)
+      if (amount >= 0) return;
+      const absAmount = Math.abs(amount);
+      total += absAmount;
+      const key = txn.currentEditName || 'Uncategorized';
+      map.set(key, (map.get(key) || 0) + absAmount);
+    });
+
+    const groups = Array.from(map.entries()).map(([name, value]) => ({
+      name,
+      value,
+      percentage: total ? (value / total) * 100 : 0,
+    }));
+
+    return { total, groups };
+  }, [sorted]);
+
+  const incomeSummary = useMemo(() => {
+    if (!sorted?.length) {
+      return { total: 0, groups: [] as CategoryGroup[] };
+    }
+
+    let total = 0;
+    const map = new Map<string, number>();
+    sorted.forEach((txn) => {
+      const amount = Number(txn.tx_amount) || 0;
+      // Only include positive amounts (income)
+      if (amount <= 0) return;
       total += amount;
       const key = txn.currentEditName || 'Uncategorized';
       map.set(key, (map.get(key) || 0) + amount);
@@ -224,7 +232,45 @@ export default function TransactionsDialog({
     return { total, groups };
   }, [sorted]);
 
-  const hasChartData = categorySummary.groups.length > 0;
+  const hasChartData =
+    expenseSummary.groups.length > 0 || incomeSummary.groups.length > 0;
+
+  // Unified category summary (all transactions combined)
+  const unifiedCategorySummary = useMemo(() => {
+    if (!sorted?.length) {
+      return { total: 0, groups: [] as CategoryGroup[] };
+    }
+
+    let total = 0;
+    const map = new Map<string, number>();
+    sorted.forEach((txn) => {
+      const amount = Math.abs(Number(txn.tx_amount) || 0);
+      if (!amount) return;
+      total += amount;
+      const key = txn.currentEditName || 'Uncategorized';
+      map.set(key, (map.get(key) || 0) + amount);
+    });
+
+    const groups = Array.from(map.entries())
+      .map(([name, value]) => ({
+        name,
+        value,
+        percentage: total ? (value / total) * 100 : 0,
+      }))
+      .sort((a, b) => b.value - a.value); // Sort by value descending
+
+    return { total, groups };
+  }, [sorted]);
+
+  // All transactions sorted by amount (descending)
+  const transactionsByAmount = useMemo(() => {
+    if (!sorted?.length) return [];
+    return [...sorted].sort((a, b) => {
+      const amountA = Math.abs(Number(a.tx_amount) || 0);
+      const amountB = Math.abs(Number(b.tx_amount) || 0);
+      return amountB - amountA; // Descending order
+    });
+  }, [sorted]);
 
   const exportToExcel = async (data: typeof sorted) => {
    // Create a new workbook and worksheet
@@ -289,6 +335,7 @@ const addCategory = async (name: string, txnId: string) => {
     const result = await addCategoryMutation.mutateAsync({ name });
     // Optionally patch local categories, but best to refetch automatically
     setEdits((e) => ({
+      
       ...e,
       [txnId]: result.id.toString(),
     }));
@@ -458,11 +505,17 @@ const addCategory = async (name: string, txnId: string) => {
                         {/* Level 2: Transactions under this category */}
                         {isExpanded && transactions.map((t) => {
                           const currentValue = edits[t.id] ?? t.displayCategoryId;
+                          const amount = Number(t.tx_amount) || 0;
+                          const isExpense = amount < 0;
+                          const absAmount = Math.abs(amount);
                           return (
                             <TableRow key={t.id}>
                               <TableCell className="whitespace-nowrap text-sm">{t.tx_timestamp?.toLocaleString()}</TableCell>
                               <TableCell className="text-sm whitespace-normal break-words max-w-[220px]">{t.tx_narration}</TableCell>
-                              <TableCell className="whitespace-nowrap">{t.tx_amount?.toFixed(2)}</TableCell>
+                              <TableCell className={`whitespace-nowrap font-semibold ${isExpense ? 'text-red-600' : 'text-emerald-600'}`}>
+                                {isExpense ? '-' : '+'}
+                                {currencyFormatter.format(absAmount)}
+                              </TableCell>
                               <TableCell className="whitespace-nowrap">
                                 <Select
                                   value={currentValue?.toString() ?? 'none'}
@@ -504,87 +557,21 @@ const addCategory = async (name: string, txnId: string) => {
             </div>
           </div>
         ) : (
-          <div className="h-[65vh] w-full rounded-md border p-4">
-            {loading ? (
-              <div className="flex h-full items-center justify-center text-sm text-slate-500">
-                Preparing chart…
-              </div>
-            ) : hasError ? (
-              <div className="p-6 text-center text-sm text-red-600">
-                {(txnsError as Error)?.message ||
-                  (catsError as Error)?.message ||
-                  'Something went wrong.'}
-              </div>
-            ) : !hasChartData ? (
-              <div className="flex h-full items-center justify-center rounded-md border border-dashed p-6 text-center text-sm text-slate-500">
-                Not enough categorized transactions to render a chart yet.
-              </div>
-            ) : (
-              <div className="flex h-full flex-col gap-4 lg:flex-row">
-                <div className="flex-1">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={categorySummary.groups}
-                        dataKey="value"
-                        nameKey="name"
-                        innerRadius={80}
-                        outerRadius={140}
-                        paddingAngle={2}
-                      >
-                        {categorySummary.groups.map((entry, index) => (
-                          <Cell
-                            key={entry.name}
-                            fill={CHART_COLORS[index % CHART_COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value: number, name) => [
-                          currencyFormatter.format(Number(value)),
-                          name,
-                        ]}
-                      />
-                      <text
-                        x="50%"
-                        y="50%"
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        className="fill-slate-700 text-sm font-semibold"
-                      >
-                        Transactions
-                      </text>
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="space-y-2 rounded-md border p-3 lg:w-64">
-                  <p className="text-sm font-semibold text-slate-600">
-                    Transaction categories
-                  </p>
-                  {categorySummary.groups.map((group, idx) => (
-                    <div
-                      key={group.name}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="h-3 w-3 rounded-full"
-                          style={{
-                            backgroundColor:
-                              CHART_COLORS[idx % CHART_COLORS.length],
-                          }}
-                        />
-                        <span>{group.name}</span>
-                      </div>
-                      <span className="font-medium">
-                        {currencyFormatter.format(group.value)} (
-                        {group.percentage.toFixed(2)}%)
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+          <div className="h-[65vh] w-full overflow-y-auto rounded-md border p-3 lg:p-4 lg:overflow-hidden">
+            <PieChartView
+              expenseSummary={expenseSummary}
+              incomeSummary={incomeSummary}
+              transactionsByAmount={transactionsByAmount}
+              unifiedCategorySummary={unifiedCategorySummary}
+              loading={loading}
+              hasError={hasError}
+              hasChartData={hasChartData}
+              errorMessage={
+                (txnsError as Error)?.message ||
+                (catsError as Error)?.message ||
+                undefined
+              }
+            />
           </div>
         )}
 
@@ -597,17 +584,20 @@ const addCategory = async (name: string, txnId: string) => {
           >
             Close
           </Button>
-          <Button
-            onClick={onSave}
-            disabled={
-              isPending || loading || !!hasError || (sorted?.length ?? 0) === 0
-            }
-            className="cursor-pointer"
-          >
-            {isPending ? 'Updating…' : 'Update'}
-          </Button>
+          {viewMode === 'table' && (
+            <Button
+              onClick={onSave}
+              disabled={
+                isPending || loading || !!hasError || (sorted?.length ?? 0) === 0
+              }
+              className="cursor-pointer"
+            >
+              {isPending ? 'Updating…' : 'Update'}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
