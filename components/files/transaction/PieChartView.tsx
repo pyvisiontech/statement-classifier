@@ -91,18 +91,19 @@ export default function PieChartView({
   }
 
   return (
-    <div className="relative flex h-full flex-col gap-6 overflow-y-auto pb-4 lg:flex-row lg:gap-4 lg:overflow-hidden lg:pb-0">
-       {/* Mobile: All sections stack vertically. Desktop: Charts side by side, Transaction categories on right  */}
-      <div className="flex min-h-0 flex-col gap-6 overflow-visible lg:flex-row lg:flex-1 lg:gap-4 lg:overflow-hidden lg:pr-80">
+    <div className="relative flex h-full flex-col gap-4 overflow-y-auto pb-4 lg:flex-row lg:gap-4 lg:overflow-hidden lg:pb-0">
       
-         {/* Expense Chart with Categories */}
-        <div className="flex w-full flex-shrink-0 flex-col gap-3 overflow-visible rounded-lg border bg-slate-50 p-3 lg:flex-1 lg:border-0 lg:bg-transparent lg:p-0 lg:gap-4">
+      
+      <div className="flex min-h-0 flex-col gap-4 lg:flex-row lg:flex-1 lg:gap-4 lg:overflow-hidden lg:pr-80 lg:min-w-0">
+        
+        <div className="flex w-full flex-shrink-0 flex-col gap-3 rounded-lg border bg-slate-50 p-3 lg:flex-1 lg:border-0 lg:bg-transparent lg:p-0 lg:gap-4 lg:min-w-0 lg:overflow-hidden">
           <h3 className="flex-shrink-0 text-center text-sm font-semibold text-slate-700 lg:text-base">
             Expense Overview
           </h3>
           {expenseSummary.groups.length > 0 ? (
             <>
-              <div className="h-[180px] flex-shrink-0 lg:flex-1 lg:min-h-0">
+              {/* Expense Pie Chart */}
+              <div className="h-[180px] w-full flex-shrink-0 lg:flex-1 lg:min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -129,7 +130,6 @@ export default function PieChartView({
                     <text
                       x="50%"
                       y="50%"
-                      
                       textAnchor="middle"
                       dominantBaseline="middle"
                       className="fill-slate-700 text-sm font-semibold lg:text-xl"
@@ -139,7 +139,8 @@ export default function PieChartView({
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="flex w-full flex-shrink-0 flex-col space-y-2 rounded-md border bg-white p-2.5 lg:p-3">
+              
+              <div className="flex w-full flex-shrink-0 flex-col space-y-2 rounded-md border bg-white p-2.5 lg:p-3 mt-2">
                 <p className="flex-shrink-0 text-xs font-bold text-slate-600">
                   Expense categories
                 </p>
@@ -186,13 +187,14 @@ export default function PieChartView({
           )}
         </div>
 
-         {/* Income Chart with Categories */}
-        <div className="flex w-full flex-shrink-0 flex-col gap-3 rounded-lg border bg-slate-50 p-3 lg:flex-1 lg:border-0 lg:bg-transparent lg:p-0 lg:gap-4">
+        
+        <div className="flex w-full flex-shrink-0 flex-col gap-3 rounded-lg border bg-slate-50 p-3 lg:flex-1 lg:border-0 lg:bg-transparent lg:p-0 lg:gap-4 lg:min-w-0 lg:overflow-hidden">
           <h3 className="text-center text-sm font-semibold text-slate-700 lg:text-base">
             Income Overview
           </h3>
           {incomeSummary.groups.length > 0 ? (
             <>
+              {/* Income Pie Chart */}
               <div className="h-[180px] flex-shrink-0 lg:flex-1 lg:min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -229,7 +231,8 @@ export default function PieChartView({
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="flex w-full flex-shrink-0 flex-col space-y-2 rounded-md border bg-white p-2.5 lg:p-3">
+              
+              <div className="flex w-full flex-shrink-0 flex-col space-y-2 rounded-md border bg-white p-2.5 lg:p-3 mt-2">
                 <p className="flex-shrink-0 text-xs font-bold text-slate-600">
                   Income categories
                 </p>
@@ -277,67 +280,65 @@ export default function PieChartView({
         </div>
       </div>
 
-        {/* Transaction Categories - Mobile: at bottom after all charts, Desktop: on right. */}
-      <div className="order-last flex w-full flex-shrink-0 flex-col rounded-lg border bg-slate-50 p-3 lg:order-none lg:absolute lg:right-0 lg:top-0 lg:h-full lg:w-80 lg:border-0 lg:bg-transparent lg:p-0">
-        <div className="mb-3 flex-shrink-0 lg:mb-2">
-          <p className="text-sm font-semibold text-slate-700">
-            Transaction categories
-          </p>
-        </div>
-        <ScrollArea className="h-64 rounded-md border bg-white lg:flex-1 lg:min-h-0">
-          <div className="divide-y p-2">
-            {transactionsByAmount.length > 0 ? (
-              transactionsByAmount.map((txn) => {
-                const amount = Number(txn.tx_amount) || 0;
-                const isExpense = amount < 0;
-                const absAmount = Math.abs(amount);
-                const categoryName = txn.currentEditName || 'Uncategorized';
-                // Find color for this category
-                const categoryIndex = unifiedCategorySummary.groups.findIndex(
-                  (g) => g.name === categoryName
-                );
-                const categoryColor =
-                
-                  categoryIndex >= 0
-                    ? CHART_COLORS[categoryIndex % CHART_COLORS.length]
-                    : CHART_COLORS[0];
+      {/* Transaction Categories - Desktop only, hidden on mobile */}
+      <div className="hidden lg:absolute lg:right-0 lg:top-0 lg:h-full lg:w-80 lg:flex lg:flex-col z-10 bg-transparent">
+          <div className="mb-3 flex-shrink-0">
+            <p className="text-sm font-semibold text-slate-700">
+              Transaction categories
+            </p>
+          </div>
+          <ScrollArea className="flex-1 min-h-0 rounded-md border bg-white">
+            <div className="divide-y p-2">
+              {transactionsByAmount.length > 0 ? (
+                transactionsByAmount.map((txn) => {
+                  const amount = Number(txn.tx_amount) || 0;
+                  const isExpense = amount < 0;
+                  const absAmount = Math.abs(amount);
+                  const categoryName = txn.currentEditName || 'Uncategorized';
+                  
+                  const categoryIndex = unifiedCategorySummary.groups.findIndex(
+                    (g) => g.name === categoryName
+                  );
+                  const categoryColor =
+                    categoryIndex >= 0
+                      ? CHART_COLORS[categoryIndex % CHART_COLORS.length]
+                      : CHART_COLORS[0];
 
-                return (
-                  <div
-                    key={txn.id}
-                    className="flex items-center justify-between py-2.5 px-2 hover:bg-slate-50"
-                  >
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                  return (
+                    <div
+                      key={txn.id}
+                      className="flex items-center justify-between py-2.5 px-2 hover:bg-slate-50"
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span
+                          className="h-3 w-3 rounded-full flex-shrink-0"
+                          style={{
+                            backgroundColor: categoryColor,
+                          }}
+                        />
+                        <span className="truncate text-xs font-medium text-slate-800">
+                          {categoryName}
+                        </span>
+                      </div>
                       <span
-                      
-                        className="h-3 w-3 rounded-full flex-shrink-0"
-                        style={{
-                          backgroundColor: categoryColor,
-                        }}
-                      />
-                      <span className="truncate text-xs font-medium text-slate-800">
-                        {categoryName}
+                        className={`ml-2 whitespace-nowrap text-xs font-semibold ${
+                          isExpense ? 'text-red-600' : 'text-emerald-600'
+                        }`}
+                      >
+                        {isExpense ? '-' : '+'}
+                        {currencyFormatter.format(absAmount)}
                       </span>
                     </div>
-                    <span
-                      className={`ml-2 whitespace-nowrap text-xs font-semibold ${
-                        isExpense ? 'text-red-600' : 'text-emerald-600'
-                      }`}
-                    >
-                      {isExpense ? '-' : '+'}
-                      {currencyFormatter.format(absAmount)}
-                    </span>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="p-4 text-center text-xs text-slate-500">
-                No transactions to display
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-      </div>
+                  );
+                })
+              ) : (
+                <div className="p-4 text-center text-xs text-slate-500">
+                  No transactions to display
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
     </div>
   );
 }
