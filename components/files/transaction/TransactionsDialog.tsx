@@ -565,7 +565,7 @@ const addCategory = async (name: string, txnId: string) => {
             </div>
           </div>
         ) : (
-          <div className="h-[65vh] w-full overflow-y-auto rounded-md border p-3 lg:p-4 lg:overflow-hidden">
+          <div className="h-[60vh] w-full overflow-y-auto rounded-md border p-3 lg:h-[65vh] lg:p-4 lg:overflow-hidden pb-20 lg:pb-3">
             <PieChartView
               expenseSummary={expenseSummary}
               incomeSummary={incomeSummary}
@@ -583,7 +583,7 @@ const addCategory = async (name: string, txnId: string) => {
           </div>
         )}
 
-        <DialogFooter className="flex items-center justify-end gap-2">
+        <DialogFooter className="sticky bottom-0 z-10 flex items-center justify-end gap-2 bg-white border-t pt-4 mt-4 lg:static lg:border-t-0 lg:pt-0 lg:mt-0">
           <Button
             variant="ghost"
             onClick={() => setOpen(false)}
