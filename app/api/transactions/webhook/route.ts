@@ -145,8 +145,7 @@ export async function POST(req: NextRequest) {
       inserted: data?.length ?? 0,
       invalids,
     });
-  } catch (err: any) {
-    // eslint-disable-next-line no-console
+  } catch (err: unknown) {
     console.error('[transactions/webhook] insert error:', err);
     return NextResponse.json(
       { error: 'Internal Server Error' },

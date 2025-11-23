@@ -102,8 +102,9 @@ export default function UploadFilesDialog({
       });
       setOpen(false);
       clearAll();
-    } catch (e: any) {
-      toast.error(e?.message ?? 'Failed to upload files');
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'Failed to upload files';
+      toast.error(errorMessage);
     } finally {
       setUploading(false);
     }

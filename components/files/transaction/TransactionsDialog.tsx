@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -171,8 +172,9 @@ export default function TransactionsDialog({
       await saveChanges(patches);
       toast.success('Transactions updated');
       setOpen(false);
-    } catch (e: any) {
-      toast.error(e?.message ?? 'Failed to update transactions');
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'Failed to update transactions';
+      toast.error(errorMessage);
     }
   };
 
@@ -304,7 +306,7 @@ export default function TransactionsDialog({
   });
 
   // Write workbook to buffer then trigger download
-  workbook.xlsx.writeBuffer().then((buffer: any) => {
+  workbook.xlsx.writeBuffer().then((buffer: ArrayBuffer) => {
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     saveAs(blob, 'transactions.xlsx');
   });
@@ -341,7 +343,7 @@ const addCategory = async (name: string, txnId: string) => {
     }));
     setShowAddCategory(null);
     setNewCategoryName('');
-  } catch (e) {
+  } catch {
     toast.error('Unable to add category');
   }
   setIsAddingCategory(false);
@@ -357,6 +359,9 @@ const addCategory = async (name: string, txnId: string) => {
       <DialogContent className="!max-w-[95vw] !sm:max-w-[95vw] w-[95vw] max-h-[90vh] overflow-hidden p-6">
         <DialogHeader>
           <DialogTitle>Transactions</DialogTitle>
+          <DialogDescription>
+            View and manage transactions for this file. Switch between table and graph views.
+          </DialogDescription>
         </DialogHeader>
 
         {/* Header controls */}
@@ -451,6 +456,9 @@ const addCategory = async (name: string, txnId: string) => {
     <DialogContent>
       <DialogHeader>
         <DialogTitle>Add Category</DialogTitle>
+        <DialogDescription>
+          Enter a new category name to add it to your list of categories.
+        </DialogDescription>
       </DialogHeader>
       <input
         value={newCategoryName}

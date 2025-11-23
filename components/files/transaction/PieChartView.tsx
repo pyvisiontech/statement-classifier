@@ -148,7 +148,7 @@ export default function PieChartView({
                     <div className="space-y-1.5 pr-2">
                       {[...expenseSummary.groups]
                         .sort((a, b) => b.value - a.value)
-                        .map((group, sortedIdx) => {
+                        .map((group) => {
                           const originalIdx = expenseSummary.groups.findIndex(
                             (g) => g.name === group.name
                           );
@@ -238,7 +238,7 @@ export default function PieChartView({
                     <div className="space-y-1.5 pr-2">
                       {[...incomeSummary.groups]
                         .sort((a, b) => b.value - a.value)
-                        .map((group, sortedIdx) => {
+                        .map((group) => {
                           const originalIdx = incomeSummary.groups.findIndex(
                             (g) => g.name === group.name
                           );
