@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 const items = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/clients', label: 'Clients', icon: Users },
+  
 ];
 
 export function Sidebar() {
