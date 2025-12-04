@@ -12,7 +12,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2) Only redirect unauthenticated users for page navigations
+  // 2) Skip expensive Supabase session check for public auth/landing pages.
+  // These pages can render without knowing the current session; redirects for
+  // authenticated users are handled after login elsewhere.
+  if (pathname === '/' || pathname === '/signin' || pathname === '/signup') {
+    return NextResponse.next();
+  }
+
+  // 3) Only redirect unauthenticated users for page navigations
   const accept = request.headers.get('accept') || '';
   const isPageNavigation = accept.includes('text/html');
 

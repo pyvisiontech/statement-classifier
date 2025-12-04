@@ -36,7 +36,14 @@ const Schema = z.object({
     .string()
     .min(1, { message: 'Please enter a valid email' })
     .refine((e) => validateEmail(e)),
-  phone_number: z.string().min(1, 'Phone number is required'),
+  // DB column is varchar(10) – enforce max 10 digits on the client
+  phone_number: z
+    .string()
+    .min(1, 'Phone number is required')
+    .refine(
+      (val) => val.replace(/\D/g, '').length <= 10,
+      'Phone number must be at most 10 digits'
+    ),
 });
 
 type FormValues = z.infer<typeof Schema>;
@@ -102,8 +109,14 @@ export default function AddClientDialog({
       toast.success('Client added successfully!');
       onCreated?.();
     },
-    onError: () => {
-      toast.error('Failed to add client');
+    onError: (err) => {
+      const message =
+        err instanceof Error ? err.message : String(err ?? 'Unknown error');
+      if (message.includes('clients_email_key')) {
+        toast.error('A client with this email already exists.');
+      } else {
+        toast.error('Failed to add client');
+      }
     },
   });
 
@@ -123,13 +136,16 @@ export default function AddClientDialog({
   );
 
   async function onSubmit(values: FormValues) {
+    // Normalize phone number to digits only and trim to 10 chars
+    const normalizedPhone = values.phone_number.replace(/\D/g, '').slice(0, 10);
+
     if (isEditing && existingClientData?.id) {
       const payload: Partial<ClientInsertData> = {
         id: existingClientData.id,
         first_name: values.first_name,
         last_name: values.last_name || null,
         email: values.email,
-        phone_number: values.phone_number,
+        phone_number: normalizedPhone,
       };
       await editAsync(payload);
       return;
@@ -141,7 +157,7 @@ export default function AddClientDialog({
       first_name: values.first_name,
       last_name: values.last_name || null,
       email: values.email || '',
-      phone_number: values.phone_number,
+      phone_number: normalizedPhone,
     };
     await createAsync(payload);
   }
