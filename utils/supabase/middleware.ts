@@ -1,55 +1,80 @@
-import { createServerClient } from '@supabase/ssr';
+// utils/supabase/middleware.ts
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function updateSession(
   request: NextRequest,
-  opts?: { isPageNavigation?: boolean }
+  { isPageNavigation = true }: { isPageNavigation?: boolean } = {}
 ) {
-  let supabaseResponse = NextResponse.next({
-    request,
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
   });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, // Changed from PUBLISHABLE_KEY to ANON_KEY
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll();
+        get(name: string) {
+          return request.cookies.get(name)?.value;
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({
-            request,
+        set(name: string, value: string, options: CookieOptions) {
+          response.cookies.set({
+            name,
+            value,
+            ...options,
           });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
+        },
+        remove(name: string, options: CookieOptions) {
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
+            maxAge: 0,
+          });
         },
       },
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Refresh session if expired - required for Server Components
+  const { data: { session } } = await supabase.auth.getSession();
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth')
-  ) {
-    // Only redirect browsers (page navigations), not API/webhook POSTs
-    if (opts?.isPageNavigation) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/login';
-      return NextResponse.redirect(url);
-    }
-    // Otherwise just let it through — API routes can handle 401/403 themselves
-    return supabaseResponse;
+  // Public paths that don't require authentication
+  const publicPaths = [
+    '/',        // public landing page
+    '/signin',
+    '/signup',
+    '/auth/callback',
+    '/forgot-password',
+    '/_next/',
+    '/favicon.ico',
+    '/api/'
+  ];
+
+  const isPublicPath = publicPaths.some(path => {
+    // Exact match
+    if (request.nextUrl.pathname === path) return true;
+    // Path starts with (for nested paths)
+    if (path.endsWith('/') && request.nextUrl.pathname.startsWith(path)) return true;
+    // API routes
+    if (path === '/api/' && request.nextUrl.pathname.startsWith('/api/')) return true;
+    return false;
+  });
+
+  // Redirect unauthenticated users to sign-in for protected routes
+  if (!session && !isPublicPath) {
+    const url = new URL('/signin', request.url);
+    url.searchParams.set('redirectedFrom', request.nextUrl.pathname);
+    return NextResponse.redirect(url);
   }
 
-  return supabaseResponse;
+  // Redirect authenticated users away from auth pages to dashboard
+  if (session && (request.nextUrl.pathname === '/signin' || request.nextUrl.pathname === '/signup')) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  return response;
 }

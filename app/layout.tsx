@@ -29,7 +29,7 @@ export default function RootLayout({
           <GlobalContextProvider>
             <QueryProvider>
               {children}
-              <Toaster />
+              <Toaster position="top-center" />
             </QueryProvider>
           </GlobalContextProvider>
         </SupabaseProvider>

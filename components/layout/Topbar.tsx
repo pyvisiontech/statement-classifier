@@ -17,9 +17,11 @@ export function Topbar() {
   const router = useRouter();
 
   return (
-    <header className="border-b bg-white">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-        <div className="font-semibold tracking-tight">Statement Classifier</div>
+    <header className="border-b border-slate-200 bg-white">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="text-sm font-semibold tracking-tight text-slate-900">
+          Statement Classifier
+        </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

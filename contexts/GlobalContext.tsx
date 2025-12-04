@@ -60,19 +60,17 @@ export const GlobalContextProvider: React.FC<GlobalContextProviderProps> = ({
       .single()
       .then(async ({ data: user }) => {
         console.log(user, 'USER');
-        // If user is deactivated, log them out
-        if (!user?.is_active) {
+        // If user record exists but is deactivated, log them out
+        if (user && !user.is_active) {
           router.push('/logout');
           return;
         }
 
-        setContextData((prev) => ({ ...prev, user, refreshData }));
-        if (user) {
-          setContextData((prev) => ({
-            ...prev,
-            refreshData,
-          }));
-        }
+        setContextData((prev) => ({
+          ...prev,
+          user: user ?? null,
+          refreshData,
+        }));
       });
   }, [session?.user.id, refreshDataState]);
 

@@ -7,7 +7,7 @@ import { LayoutDashboard, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const items = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/clients', label: 'Clients', icon: Users },
   
 ];

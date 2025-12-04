@@ -3,3 +3,4 @@ export default function DashboardPage() {
     <div className="rounded-xl border bg-white p-6 shadow-sm">Dashboard</div>
   );
 }
+

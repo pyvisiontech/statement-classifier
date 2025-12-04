@@ -1,26 +1,30 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-
+import { useRouter } from 'next/navigation';
 import { useSupabase } from '@/contexts/SupabaseContext';
-import { Spinner } from '@/components/ui/spinner';
 
 const LogoutPage = () => {
-  const supabaseClient = useSupabase();
   const router = useRouter();
+  const supabase = useSupabase();
 
   useEffect(() => {
     const signOut = async () => {
-      await supabaseClient.auth.signOut();
-      router.push('/login');
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.error('Logout failed', err);
+      } finally {
+        router.replace('/signin');
+      }
     };
+
     signOut();
-  }, [supabaseClient, router]);
+  }, [router, supabase]);
 
   return (
     <div className="flex h-screen w-full items-center justify-center">
-      <Spinner />
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
     </div>
   );
 };

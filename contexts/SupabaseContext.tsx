@@ -34,8 +34,22 @@ export const SupabaseProvider = ({
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSessionState(session);
+
+      if (['SIGNED_IN', 'SIGNED_OUT', 'TOKEN_REFRESHED'].includes(event)) {
+        try {
+          await fetch('/auth/callback', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ event, session }),
+          });
+        } catch (err) {
+          console.error('Failed to sync auth state', err);
+        }
+      }
     });
 
     return () => subscription.unsubscribe();
